@@ -19,6 +19,7 @@ class Order(models.Model):
         default="Pending",
     )
     delivery_date = models.DateTimeField(null=True, blank=True)  # Actual delivery date
+    delivery_partner = models.ForeignKey(CustomUser, related_name="assigned_orders", null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)  # Order creation timestamp
 
     def __str__(self):

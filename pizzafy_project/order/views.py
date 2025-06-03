@@ -15,38 +15,64 @@ log = logging.getLogger(__name__)
 
 
 class UpdateOrderStatusView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, order_id):
+        user = request.user
+        new_status = request.data.get("status")
+        comment = request.data.get("comment")
+
+        # Validate comment
+        if not comment:
+            return Response({"error": "Comment is required to update the status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch the order
         try:
             order = Order.objects.get(id=order_id)
-            new_status = request.data.get("status")
-
-            # Check if order is already canceled and prevent status change
-            if order.status == "Cancel":
-                return Response(
-                    {"error": "Order is already canceled and cannot be changed"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Validate the new status
-            if new_status not in ["Unfulfilled", "Fulfilled", "Cancel"]:
-                return Response(
-                    {"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Update the order status
-            order.status = new_status
-            order.save()
-
-            return Response(
-                {"status": "Order status updated"}, status=status.HTTP_200_OK
-            )
-
         except Order.DoesNotExist:
-            return Response(
-                {"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Prevent status change if already canceled
+        if order.status == "Cancel":
+            return Response({"error": "Order is already canceled and cannot be changed"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Role-based validation
+        if user.role == "Customer" and new_status != "Cancel":
+            return Response({"error": "Customers can only cancel orders"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.role not in ["Admin", "DeliveryPartner"] and new_status not in ["Cancel"]:
+            return Response({"error": "You do not have permission to update the status"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Validate new status
+        valid_statuses = ["Unfulfilled", "Fulfilled", "Cancel"]
+        if new_status not in valid_statuses:
+            return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the order status and save the comment
+        order.status = new_status
+        order.comment = comment
+        order.save()
+
+        return Response({"status": "Order status updated"}, status=status.HTTP_200_OK)
+
+
+class CheckoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, checkout_id=None):
+        # If checkout_id is provided, return the specific checkout
+        if checkout_id:
+            try:
+                checkout = Checkout.objects.get(id=checkout_id, user=request.user)
+            except Checkout.DoesNotExist:
+                return Response({"error": "Checkout not found or does not belong to user"}, status=status.HTTP_404_NOT_FOUND)
+            serializer = CheckoutSerializer(checkout)
+            return Response({"checkout": serializer.data}, status=status.HTTP_200_OK)
+
+        # If no checkout_id is provided, return all checkouts for the user
+        checkouts = Checkout.objects.filter(user=request.user)
+        serializer = CheckoutSerializer(checkouts, many=True)
+        return Response({"checkouts": serializer.data}, status=status.HTTP_200_OK)
 
 
 class CustomerOrderHistoryView(APIView):
@@ -273,6 +299,13 @@ class CompleteCheckoutView(APIView):
                 customizations=checkout_line.customizations,
             )
 
+        
+        # Assign Delivery Partner (Dummy Setup: first available DeliveryPartner)
+        delivery_partner = CustomUser.objects.filter(role="DeliveryPartner", is_available=True).first()
+        if delivery_partner:
+            order.delivery_partner = delivery_partner
+            order.save()
+            
         # Update Payment object with the associated order ID
         payment = Payment.objects.filter(checkout=checkout).first()
         if payment:

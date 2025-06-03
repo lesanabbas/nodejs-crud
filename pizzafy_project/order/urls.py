@@ -2,6 +2,8 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    path('checkouts/', views.CheckoutView.as_view(), name='checkouts'),
+    path('checkouts/<int:checkout_id>/', views.CheckoutView.as_view(), name='checkout-detail'),
     path('create-checkout/', views.CreateCheckoutView.as_view(), name='create-checkout'),
     path('update-checkout/<int:checkout_id>/', views.UpdateCheckoutView.as_view(), name='update-checkout'),
     path('payment/', include('payment.urls')),
