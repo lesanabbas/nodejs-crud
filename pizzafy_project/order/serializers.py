@@ -24,8 +24,9 @@ class OrderLineSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_lines = OrderLineSerializer(many=True, read_only=True)
-    user = serializers.StringRelatedField(read_only=True)  # or use UserSerializer if needed
+    user = serializers.StringRelatedField(read_only=True)
+    delivery_partner = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'status', 'created_at', 'order_lines']
+        fields = ['id', 'user', 'status', 'created_at', 'delivery_partner', 'order_lines']

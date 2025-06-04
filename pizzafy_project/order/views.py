@@ -2,7 +2,7 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Order, OrderLine, Checkout, CheckoutLine
+from .models import Order, OrderLine, Checkout, CheckoutLine, Review
 from payment.models import Payment
 from core.models import User as CustomUser
 from pizza.models import Pizza
@@ -321,4 +321,65 @@ class CompleteCheckoutView(APIView):
         return Response(
             {"message": "Checkout completed", "order_data": serializer.data},
             status=status.HTTP_200_OK,
+        )
+
+
+class CreateReviewView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, order_id):
+        # Extract rating and comment from the request
+        rating = request.data.get("rating")
+        comment = request.data.get("comment")
+        
+        # Validation: Ensure rating and comment are provided
+        if not all([rating, comment]):
+            return Response(
+                {"error": "Rating and comment are required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate rating is within 1-5
+        if rating not in [1, 2, 3, 4, 5]:
+            return Response(
+                {"error": "Rating must be between 1 and 5"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Retrieve the order, and check conditions
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Ensure the order is fulfilled and belongs to the user
+        if order.status != "Fulfilled":
+            return Response(
+                {"error": "You can only review a delivery partner for a fulfilled order"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if order.user != request.user:
+            return Response(
+                {"error": "You can only review orders you placed"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Ensure the order has a delivery partner assigned
+        if not order.delivery_partner:
+            return Response(
+                {"error": "Order does not have an assigned delivery partner"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create the review for the delivery partner
+        Review.objects.create(
+            order=order,
+            rating=rating,
+            comment=comment,
+        )
+
+        return Response(
+            {"message": "Review submitted successfully"}, 
+            status=status.HTTP_201_CREATED
         )

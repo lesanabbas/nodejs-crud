@@ -60,3 +60,13 @@ class CheckoutLine(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.pizza.name} ({self.size}) in Checkout {self.checkout.id}"
+    
+    
+class Review(models.Model):
+    order = models.OneToOneField(Order, null=True, on_delete=models.SET_NULL)
+    rating = models.IntegerField(choices=[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)])  # Rating out of 5 stars
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review for {self.delivery_partner.username} by {self.customer.username}"
