@@ -33,11 +33,9 @@ schema_view = get_schema_view(
     public=True,
 )
 
-def index(request):
-    return JsonResponse({"message": "Server is running...."})
 
 urlpatterns = [
-    path('', index, name="name"),
+    path('', include('core.urls')),
     path('admin/', admin.site.urls),
     path('api/auth/', include('core.urls')),
     path('api/pizza/', include('pizza.urls')),
