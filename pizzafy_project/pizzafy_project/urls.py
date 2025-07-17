@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
@@ -32,12 +33,15 @@ schema_view = get_schema_view(
     public=True,
 )
 
+def index(request):
+    return JsonResponse({"message": "Server is running...."})
+
 urlpatterns = [
+    path('', index, name="name"),
     path('admin/', admin.site.urls),
     path('api/auth/', include('core.urls')),
     path('api/pizza/', include('pizza.urls')),
     path('api/checkout/', include('order.urls')),
-    # path('api/payment/', include('payment.urls')),
     
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-docs'),
 ]
