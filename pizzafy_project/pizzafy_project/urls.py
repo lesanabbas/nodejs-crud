@@ -35,11 +35,10 @@ schema_view = get_schema_view(
 
 
 urlpatterns = [
-    path('', include('core.urls')),
+    path('', include('home.urls')),
     path('admin/', admin.site.urls),
     path('api/auth/', include('core.urls')),
     path('api/pizza/', include('pizza.urls')),
-    path('api/checkout/', include('order.urls')),
-    
+    path('api/checkout/', include('order.urls')),    
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-docs'),
 ]
