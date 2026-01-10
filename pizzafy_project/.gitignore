@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environment folder
 venv/
+ref_venv/
 
 # SQLite database file
 db.sqlite3
